@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import { Camera, cameraPlaneRay } from '../src/camera.js';
 import { FOV } from '../src/config.js';
+import { Input } from '../src/input.js';
 import { makeScreen } from './support/screen.js';
 
 const EPS = 1e-10;
@@ -62,4 +63,34 @@ test('Camera.buildRays fills a symmetric normalized camera-plane table', () => {
 
   near(cam.rc[0], -cam.rc[screen.cols - 1], 1e-6);
   near(cam.rs[0], cam.rs[screen.cols - 1], 1e-6);
+});
+
+test('mouse drag looks up and down in the direction of movement', (t) => {
+  const previousWindow = globalThis.window;
+  const windowHandlers = {};
+  const canvasHandlers = {};
+  globalThis.window = { addEventListener: (type, handler) => { windowHandlers[type] = handler; } };
+  t.after(() => { globalThis.window = previousWindow; });
+  const input = new Input({
+    addEventListener: (type, handler) => { canvasHandlers[type] = handler; },
+  });
+  const cam = new Camera();
+  const initialAngle = cam.angle;
+  const rows = 100;
+  const horizon = rows / 2;
+
+  canvasHandlers.mousedown({ clientX: 50, clientY: 100 });
+  windowHandlers.mousemove({ clientX: 60, clientY: 80 });
+  cam.applyLook(input.takeLook(), rows);
+  assert.ok(horizon - cam.pitch > horizon, 'dragging up should lower the horizon');
+  assert.ok(cam.angle < initialAngle, 'horizontal look should retain its direction');
+
+  windowHandlers.mousemove({ clientX: 60, clientY: 120 });
+  cam.applyLook(input.takeLook(), rows);
+  assert.ok(horizon - cam.pitch < horizon, 'dragging down should raise the horizon');
+
+  cam.applyLook({ x: 0, y: -100000 }, rows);
+  assert.equal(cam.pitch, -rows * 0.9);
+  cam.applyLook({ x: 0, y: 100000 }, rows);
+  assert.equal(cam.pitch, rows * 1.5);
 });

@@ -260,11 +260,7 @@ async function loadView(view) {
 function update(dt, live) {
   const world = state.world;
   const look = input.takeLook();
-  if (look.x || look.y) {
-    cam.angle -= look.x * 0.004;
-    cam.pitch = Math.max(-screen.rows * 0.9,
-                 Math.min(screen.rows * 1.5, cam.pitch - look.y * 0.35));
-  }
+  if (look.x || look.y) cam.applyLook(look, screen.rows);
 
   const running = input.down('shift');
   const altMult = Math.min(MAX_SPEED_MULT, 1 + cam.z * SPEED_PER_CELL_UP);
